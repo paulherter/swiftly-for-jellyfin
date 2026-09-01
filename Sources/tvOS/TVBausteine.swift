@@ -632,12 +632,12 @@ struct Kopfauskunft<Schluss: View>: View {
 
             Text(item.overview ?? "")
                 .font(.system(size: 29))
-                .lineSpacing(11)
+                .lineSpacing(Stil.beschreibungLuft)
                 .foregroundStyle(Stil.schrift.opacity(0.62))
                 // **Immer drei Zeilen**, auch wenn der Folgentitel darueber
                 // steht. Vorher waren es dort zwei, damit der Block seine
                 // feste Hoehe hielt — Paul will drei.
-                .lineLimit(3)
+                .lineLimit(zweitzeile == nil ? 3 : 2)
                 .padding(.top, 22)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
@@ -653,7 +653,7 @@ struct Kopfauskunft<Schluss: View>: View {
         // Dort bleibt es also bei 258, und die Knopfreihe steht weiter auf
         // jeder Seite an derselben Stelle.
         .frame(width: 1000,
-               height: Stil.auskunftHoehe + (zweitzeile == nil ? 0 : 54),
+               height: Stil.auskunftHoehe(zweitzeile: zweitzeile != nil),
                alignment: .topLeading)
     }
 
