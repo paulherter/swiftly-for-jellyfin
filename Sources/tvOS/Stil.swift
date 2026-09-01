@@ -140,6 +140,25 @@ extension Stil {
     /// Beschreibung, ein langer Titel, eine Folge mit Zweitzeile — der Block
     /// ist immer gleich hoch, also steht die Knopfreihe immer an derselben
     /// Stelle.
+    /// **Wo das oberste Element jeder Seite endet.**
+    ///
+    /// Paul: „geh mal auf jede Seite und guck, wo das oberste Element endet —
+    /// das muss ueberall dasselbe sein, sonst haben wir kein konsistentes
+    /// Design." Stimmt, und es war es nicht:
+    ///
+    ///     Start, Detail   Titel 68 ab 196   endet 264
+    ///     Bibliothek      Chips 48 ab 190   endet 238
+    ///     Suche           Feld  76 ab 190   endet 266
+    ///
+    /// Ich hatte die **Anfaenge** auf 190 gelegt. Bei verschieden hohen
+    /// Elementen richtet das nichts aus — sichtbar ist die Unterkante, weil
+    /// darunter der Inhalt beginnt.
+    ///
+    /// 264 kommt vom Titel: 196 aus der Tafel plus seine Zeilenhoehe. Jede
+    /// Seite rechnet ihren oberen Abstand daraus und aus der Hoehe ihres
+    /// eigenen ersten Elements zurueck.
+    static let erstesEnde: CGFloat = 264
+
     static var auskunftHoehe: CGFloat { auskunftHoehe(zweitzeile: false) }
 
     /// **Mit Folgentitel eine Zeile weniger Beschreibung.**
