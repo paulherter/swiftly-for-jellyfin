@@ -149,13 +149,19 @@ struct HauptView: View {
             //
             // Auf den anderen Seiten scrollen die Kacheln weiter unter die
             // Leiste, dort bleibt er.
-            // **Nicht auf der Startseite.**
+            // **Nicht auf der Startseite, und dort inzwischen gar nicht.**
             //
-            // Dort gehoert er unter die Schrift, nicht darueber: der Entwurf
-            // setzt den Textblock ausdruecklich mit `z-index: 1` ueber den
-            // Verlauf. Von hier aus liegt er zwangslaeufig obenauf und hat
-            // den Titel grau eingefaerbt. Die Startseite bringt ihren
-            // eigenen mit, siehe `HomeView.deckel`.
+            // Von hier aus laege er zwangslaeufig obenauf und faerbte den
+            // Titel grau — deshalb war er hier schon immer ausgenommen. Die
+            // Startseite hatte dafuer einen eigenen, weicheren unter ihrer
+            // Schrift.
+            //
+            // Auch der ist weg: sie zeigt jetzt denselben gefaerbten Grund
+            // wie eine Detailseite, und der Verlauf war das Letzte, was sie
+            // anders aussehen liess. Paul: „es soll identisch aussehen."
+            //
+            // Auf den uebrigen Bereichen bleibt er — dort scrollen Kacheln
+            // unter die Leiste, und ohne ihn stossen sie hell dagegen.
             if anDerWurzel, bereich != .start {
                 Kopfverlauf().zIndex(1)
             }
