@@ -178,10 +178,11 @@ extension Stil {
     // einstellbar sind.
 
     /// Wie weich das Neue anfängt. Das ist der Anteil, den man sehen soll.
-    static let bereichUnschaerfe: CGFloat = 14
-    /// Und wie wenig es dabei wächst — 0,5 %, an der Fensterkante keine vier
-    /// Punkte. Man merkt es, ohne es zu sehen; mehr war jedes Mal zu viel.
-    static let bereichKleiner: CGFloat = 0.995
+    /// Paul hat den Wert am laufenden Bild eingestellt; 14 waren zu viel.
+    static let bereichUnschaerfe: CGFloat = 5
+    /// Und wie wenig es dabei wächst — 0,2 %, an der Fensterkante gut ein
+    /// Punkt. Man merkt es, ohne es zu sehen; mehr war jedes Mal zu viel.
+    static let bereichKleiner: CGFloat = 0.998
 
     /// Überblenden beim Ersetzen. 180 ms ease-out — dieselbe Zeit, in der auf
     /// dem iPhone die Player-Steuerung erscheint.
