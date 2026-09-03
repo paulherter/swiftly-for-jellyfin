@@ -60,16 +60,13 @@ struct PlayerScreen: View {
     /// hat eigene Wiedergabetasten, und ohne Zentrale greifen sie ins Leere,
     /// sobald die App nicht vorn ist.
     @State private var zentrale = Wiedergabezentrale()
-    /// Wann zuletzt umgeschaltet wurde.
-    ///
-    /// **Ein Tastendruck kommt zweimal an**: einmal als `onPlayPauseCommand`
-    /// bei der fokussierten Ansicht, einmal als `togglePlayPauseCommand` der
-    /// Wiedergabezentrale. Zwei Umschaltungen heben sich auf. Ob dabei etwas
-    /// zu sehen war, hing daran, wie schnell VLC seinen Zustand nachzog —
-    /// Pausieren ging, Fortsetzen nicht, und ein paar Tastendrucke spaeter
-    /// ging es doch. Am Telefon faellt das nicht auf, dort gibt es nur den
-    /// einen Weg ueber die Zentrale.
     /// **Der Schalter liegt in einer Klasse, nicht in der Ansicht.**
+    ///
+    /// Darin steht `zuletzt`, und das braucht es, weil **ein Tastendruck
+    /// zweimal ankommt**: einmal als `onPlayPauseCommand` bei der
+    /// fokussierten Ansicht, einmal als `togglePlayPauseCommand` der
+    /// Wiedergabezentrale. Zwei Umschaltungen heben sich auf. Am Telefon
+    /// faellt das nicht auf, dort gibt es nur den Weg ueber die Zentrale.
     ///
     /// Rueckrufe, die irgendwo liegenbleiben — bei der Wiedergabezentrale,
     /// beim System —, halten die Ansicht so fest, wie sie beim Eintragen war.
@@ -85,12 +82,12 @@ struct PlayerScreen: View {
     @State private var spulziel: Double?
     /// Wartet, bis das Tippen aufhoert, und springt dann einmal.
     @State private var spulAufgabe: Task<Void, Never>?
-    /// Wann zuletzt ein Schritt kam — daraus waechst das Tempo.
+    /// Wann zuletzt ein Schritt kam. Daran haengt nur noch die Frage, ob
+    /// gesammelt wird oder sofort gesprungen — die wachsende Schrittweite von
+    /// frueher gibt es nicht mehr, siehe `springen`.
     @State private var letzterSchritt = Date.distantPast
-    /// Wie oft hintereinander schnell getippt wurde.
     @State private var schlafminuten: Int?
     @State private var schlafAufgabe: Task<Void, Never>?
-    /// Kurze Rückmeldung nach einem Sprung — „+30 s".
     /// Ob gerade ein Finger ueber die Flaeche zieht.
     ///
     /// Ein Wisch loest **auch** Schrittbefehle aus — dieselben, die der Ring
@@ -209,7 +206,6 @@ struct PlayerScreen: View {
                 // still — der Abstand verschwindet nicht, weil er kleiner
                 // wird, sondern weil es keine zwei Zeitpunkte mehr gibt.
                 neu.laeuftGemeldet = { laeuftSetzen($0) }
-                // Kommt ein Sprung nicht an, taugt der Index der Datei
             }
 
             // **Deckend, nicht nur ein Ring.**
@@ -331,7 +327,6 @@ struct PlayerScreen: View {
                 fokus = .leiste
             }
         }
-        // Voruebergehend: sagt uns, ob der Fokus wirklich abhandenkommt.
         .onPlayPauseCommand { anhaltenOderWeiter() }
         .onExitCommand {
             // Menue bricht zuerst das Spulen ab, nicht die Wiedergabe. Wer
@@ -385,9 +380,6 @@ struct PlayerScreen: View {
             // Aufbau des Stroms umschalten, statt hinterher. Was er nicht
             // sagt, holt der Takt spaeter aus VLCs Spuren nach.
             Bildtakt.anpassen(laut: plan.quelle.flatMap(Dateiangaben.videospur))
-
-            // **Gelerntes gleich anwenden.**
-            //
         }
         .onDisappear {
             // Der Ausgang gehoert wieder der Oberflaeche, die auf 60 Hz
@@ -408,17 +400,6 @@ struct PlayerScreen: View {
             zentraleUebernehmen()
         }
         .onChange(of: dauer) { _, _ in zentraleMelden() }
-        // **Hier wurden die Griffe frueher neu eingetragen.**
-        //
-        // Das war ein Notbehelf gegen das eingefrorene `laeuft` in den
-        // Rueckrufen. Der Stand kommt inzwischen von `flaeche.isPlaying` und
-        // die Sperre aus dem `Schaltwerk`, beides Klassen — der Notbehelf ist
-        // damit ueberfluessig.
-        //
-        // Und er war schaedlich: `uebernehmen` nimmt alle Befehlsziele weg
-        // und traegt sie neu ein. Das geschah unmittelbar nach dem ersten
-        // Druck, und der zweite kam nicht mehr an — ohne jede Spur, weil er
-        // gar nicht mehr bei uns landete.
         .task(id: ausblendMarke) {
             // Im Stehen nichts wegnehmen: wer angehalten hat, schaut gerade
             // nicht aufs Bild, sondern will wissen, wo er ist.
@@ -517,8 +498,13 @@ struct PlayerScreen: View {
 
                 Spacer(minLength: 0)
 
-                // Erscheint erst, wenn die Folge fast durch ist — sonst steht
-                // sie zwei Stunden lang im Weg. Dieselbe Regel wie auf iOS.
+                // **Wann welcher Knopf gilt, entscheidet `Abschnittslogik`.**
+                //
+                // Frueher stand hier nur „Naechste Folge", und der erschien
+                // erst kurz vor Schluss. Seit den Abschnitten kann derselbe
+                // Platz auch „Vorspann ueberspringen" tragen — also am Anfang
+                // statt am Ende. Die Regel steht im Paket, damit die vier
+                // Plattformen nicht auseinanderlaufen.
                 if angebot.sichtbar {
                     Button(action: angebotAusfuehren) {
                         HStack(spacing: 10) {
@@ -544,10 +530,6 @@ struct PlayerScreen: View {
                 .accessibilityLabel("Abspielstelle")
                 .accessibilityValue(Text("\(Spielzeit.text(position)) von \(Spielzeit.text(dauer))"))
         }
-    }
-
-    private var fastDurch: Bool {
-        Folgenende.knopfZeigen(position: position, dauer: dauer)
     }
 
     /// Welcher Knopf gerade gilt. Dieselbe Regel wie auf iOS — sie steht im
@@ -644,6 +626,7 @@ struct PlayerScreen: View {
     ///
     /// Ein ausdruecklicher Befehl setzt deshalb einen Zustand; nur die
     /// Wippe auf der Fernbedienung schaltet um.
+    ///
     /// `sofortAnzeigen` trennt Befehl von Anzeige: ein ausdrueckliches
     /// „spiel ab" oder „halt an" von aussen sagt, was gelten soll, und darf
     /// den Zustand setzen. Die Wippe sagt nur „das andere" — dort wartet die
@@ -705,18 +688,6 @@ struct PlayerScreen: View {
 
     private func zentraleUebernehmen() {
         zentrale.uebernehmen(.init(
-            // **Ohne Blick auf den Zustand.**
-            //
-            // Diese Rueckrufe liegen in der Zentrale und werden spaeter
-            // aufgerufen — sie halten die Ansicht so fest, wie sie beim
-            // Eintragen war. Ein `if !laeuft` darin fragt also nicht, was
-            // gerade laeuft, sondern was beim Oeffnen des Players lief. Das
-            // war immer „ja", und damit hat `anhalten` jedesmal angehalten
-            // und `abspielen` nie abgespielt.
-            //
-            // Schreiben geht: `@State` legt seine Werte ausserhalb der
-            // Struktur ab. Nur Lesen liefert den alten Stand. Deshalb hier
-            // ausschliesslich befehlen und schreiben, nie fragen.
             // **Ausdrueckliche Befehle setzen, die Wippe schaltet um.**
             //
             // Vorher taten alle drei dasselbe. Das war richtig gegen das
@@ -752,7 +723,7 @@ struct PlayerScreen: View {
 
     /// Spulen: sammeln, beschleunigen, **einmal** springen.
     ///
-    /// Drei Regeln, und die dritte ist die, an der es zweimal gescheitert ist.
+    /// Vier Regeln, und die dritte ist die, an der es zweimal gescheitert ist.
     ///
     /// 1. **Der erste Druck bei versteckter Steuerung zeigt sie nur.** Am
     ///    Telefon tippt man auf einen sichtbaren Knopf; hier drueckt man blind
@@ -806,9 +777,6 @@ struct PlayerScreen: View {
             sprungAusfuehren(stelle)
         }
     }
-
-    // MARK: - Wenn der Abspieler nicht springen kann
-
 
     // MARK: - Wischen
 
@@ -886,7 +854,6 @@ struct PlayerScreen: View {
 
     private func sprungAusfuehren(_ ziel: Double) {
         guard let flaeche else { return }
-
 
         let vorher = position
         position = ziel
@@ -1054,10 +1021,6 @@ struct PlayerScreen: View {
             try? await Task.sleep(for: Wiedergabetakt.taktlaenge)
             guard let flaeche else { continue }
 
-            // **So frueh wie moeglich**, und das ist hier: VLC kennt die
-            // Spuren, sobald der Strom offen ist — lange vor dem ersten Bild.
-            // Der Moduswechsel laeuft dadurch hinter dem Ladeschirm ab. Setzt
-            // man ihn spaeter, wird der Fernseher mitten im Film schwarz.
             // **Nur solange etwas offen ist.** Der Aufruf liest die
             // Spurliste, und die baut VLCKit jedesmal neu auf — im halben
             // Sekundentakt ist das kein Nachsehen mehr, sondern ein
@@ -1143,9 +1106,8 @@ struct PlayerScreen: View {
             // offen steht, wird er deshalb in jedem Takt neu gesetzt.
             //
             // Nur im Stehen: waehrend der Wiedergabe soll der Fokus auf die
-            // Knoepfe oben wandern duerfen.
-            // Nur wenn er **nirgends** steht. Steht er auf einem Knopf,
-            // gehoert er dorthin.
+            // Knoepfe oben wandern duerfen. Und nur, wenn er **nirgends**
+            // steht — auf einem Knopf gehoert er dorthin.
             if !laeuft, !blattOffen, !folgenOffen, fokus == nil {
                 fokus = .leiste
             }
