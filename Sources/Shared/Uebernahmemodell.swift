@@ -70,10 +70,17 @@ final class Uebernahmemodell {
 
     /// Das andere Gerät anhalten und hier weitermachen.
     ///
-    /// **Erst anhalten, dann starten, und den Fehler nicht schlucken.** Läuft
-    /// dort weiter, während hier dasselbe beginnt, stehen zwei Tonspuren im
-    /// Raum und niemand versteht, warum. Geht das Anhalten schief, wird hier
-    /// deshalb gar nicht gestartet.
+    /// **Erst drüben beenden, dann hier starten, und den Fehler nicht
+    /// schlucken.** Läuft dort weiter, während hier dasselbe beginnt, stehen
+    /// zwei Tonspuren im Raum und niemand versteht, warum. Geht es schief,
+    /// wird hier deshalb gar nicht gestartet.
+    ///
+    /// **Beenden, nicht anhalten.** Pausiert bleibt die Verbindung zum Server
+    /// offen, die Sitzung steht weiter in der Übersicht, und auf dem anderen
+    /// Gerät liegt noch der Player über allem — man müsste ihn von Hand
+    /// schließen. Paul: „der Stream aufm Handy muss geschlossen werden, nicht
+    /// nur pausiert." Die Stelle ist vorher gelesen, sie geht dabei nicht
+    /// verloren.
     ///
     /// - Returns: Titel und Stelle, oder `nil` samt Meldung.
     /// - Parameter sitzung: Welche übernommen werden soll. Bei mehreren hat
@@ -85,7 +92,7 @@ final class Uebernahmemodell {
         defer { uebernimmt = false }
 
         do {
-            try await client.fremdbefehl(.anhalten, an: sitzung.id)
+            try await client.fremdbefehl(.beenden, an: sitzung.id)
         } catch {
             fehler = error.localizedDescription
             return nil
@@ -93,10 +100,44 @@ final class Uebernahmemodell {
 
         // Die Stelle vom anderen Gerät, nicht vom Server-Fortschritt: sie ist
         // sekundengenau und die Meldung ans Konto hinkt bis zu zehn Sekunden
-        // nach.
+        // nach. Sie stammt aus der Abfrage **vor** dem Beenden — was das
+        // andere Gerät beim Schließen meldet, kommt hier zu spät an.
         let ab = sitzung.stand?.stelle ?? 0
         // Damit das Abzeichen nicht noch einen Takt lang stehenbleibt.
         angebote = []
         return (titel, ab)
     }
 }
+
+/// Wie eine fremde Sitzung benannt und bebildert wird.
+///
+/// **Geteilt, nicht je Plattform.** Fernseher, Telefon und Mac zeigen
+/// dasselbe Abzeichen; eine zweite Fassung davon liefe innerhalb einer Woche
+/// auseinander. Genau der Fall, den CLAUDE.md meint.
+extension Fremdsitzung {
+    /// „Game of Thrones · S1 E5" oder schlicht der Filmtitel.
+    ///
+    /// Serverdaten, also `String` und nicht `LocalizedStringKey`: sonst
+    /// würde ein Filmtitel als Übersetzungsschlüssel nachgeschlagen.
+    var titelzeile: String {
+        guard let t = laeuft else { return geraetename ?? "" }
+        var teile: [String] = []
+        if let serie = t.seriesName, !serie.isEmpty { teile.append(serie) }
+        else { teile.append(t.name) }
+        if let staffel = t.parentIndexNumber, let folge = t.indexNumber {
+            teile.append("S\(staffel) E\(folge)")
+        }
+        return teile.joined(separator: " · ")
+    }
+
+    /// Das Symbol zum Gerät — nach dem Namen geraten, mehr gibt der Server
+    /// nicht her. `DeviceType` ist bei eigenen Clients leer.
+    var geraetezeichen: String {
+        let name = (geraetename ?? "").lowercased()
+        if name.contains("ipad") { return "ipad" }
+        if name.contains("mac") { return "laptopcomputer" }
+        if name.contains("tv")  { return "tv" }
+        return "iphone"
+    }
+}
+
