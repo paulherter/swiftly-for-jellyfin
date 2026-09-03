@@ -138,6 +138,7 @@ struct HauptView: View {
             // Menue fiel durch, was tvOS als Ausstieg las. Er verschwand also
             // beim ersten Druck, und keine Reparatur im Player konnte je
             // greifen, weil keine von ihnen zum Zuge kam.
+            //
             // **Auch beim Auswahlblatt sperren, nicht nur beim Player.**
             //
             // Sonst bleibt alles dahinter fokussierbar: Paul kam mit dem Ring
@@ -223,6 +224,7 @@ struct HauptView: View {
 
             // Zwischen Inhalt und Kopfleiste: der Verlauf soll den Inhalt
             // abdunkeln, aber nicht die Leiste selbst.
+            //
             // **Auf der Startseite braucht es ihn nicht mehr.**
             //
             // Er stammt aus der Zeit, als die Reihen bis unter die Leiste
@@ -233,6 +235,7 @@ struct HauptView: View {
             //
             // Auf den anderen Seiten scrollen die Kacheln weiter unter die
             // Leiste, dort bleibt er.
+            //
             // **Nicht auf der Startseite, und dort inzwischen gar nicht.**
             //
             // Von hier aus laege er zwangslaeufig obenauf und faerbte den
@@ -293,6 +296,7 @@ struct HauptView: View {
         // an, die Richtungstasten kamen nie im Player an, und die
         // Menue-Taste fiel bis ans System durch — tvOS verstand sie als
         // „App verlassen". Dieselbe Regel wie bei den unsichtbaren Stapeln.
+        //
         // **Menue fuehrt eine Stufe zurueck, nicht aus der App.**
         //
         // Ohne Behandlung faellt der Befehl am Wurzelpunkt eines Bereichs bis

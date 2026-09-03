@@ -99,6 +99,7 @@ struct Eingabefeld: View {
             // den Fokus. Das ist auch nicht noetig: die Ansicht bleibt voll
             // da und fokussierbar, nur ihre Schrift ist durchsichtig. Der
             // sichtbare Text kommt ohnehin aus `beschriftung`.
+            //
             // **Beides zusammen, nicht eins von beidem.**
             //
             // Das echte Feld liegt hinter der gestylten Beschriftung. Es war

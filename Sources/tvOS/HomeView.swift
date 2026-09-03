@@ -225,6 +225,7 @@ struct HomeView: View {
         // `initial: true` laeuft beim Erscheinen mit; ist da noch nichts
         // geladen, ist `ersterTitel` nil und es laeuft nochmal, sobald der
         // erste Titel steht. Kein Warten auf Verdacht.
+        //
         // **Senkrecht faellt der Fokus auf die vorderste Kachel der Reihe.**
         //
         // Nicht auf dieselbe Spalte und nicht auf die erste ueberhaupt: die
@@ -321,6 +322,7 @@ struct HomeView: View {
         // Genau die Form, vor der CLAUDE.md warnt — gesetzt, aber die
         // anwendende Stelle laeuft ins Leere. `userInitiated` sticht dabei
         // die Wahl des Systems; `automatic` waere nur ein Vorschlag.
+        //
         // **Zurueck heisst dorthin, wo man war — nicht nach oben.**
         //
         // Der Vorgabefokus zeigte auf `startMarke`, also auf die erste

@@ -224,6 +224,7 @@ struct SerienView: View {
                         ?? model.backdropURL(for: aktuell))
         // Die Staffelwahl liegt auf der **Seite**, nicht am Pillenknopf —
         // siehe `Handlungstafel.unterDemReihenkopf`.
+        //
         // **Solange eine Tafel offen ist, ist der Rest kein Fokusziel.**
         //
         // `focusSection` haelt den Fokus nicht fest, es ordnet ihn nur. Ein
