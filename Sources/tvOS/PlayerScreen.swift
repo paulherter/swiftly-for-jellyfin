@@ -49,6 +49,8 @@ struct PlayerScreen: View {
     @State private var folgenOffen = false
     @State private var spurenGesetzt = false
     @State private var startGemeldet = false
+    /// Vorspann, Rückblick, Abspann — leer, wenn der Server nichts weiß.
+    @State private var abschnitte: [JellyfinKit.Abschnitt] = []
     /// Der Wechsel laeuft schon — sonst loest der Takt ihn mehrfach aus.
     @State private var wechselt = false
     @State private var tempo: Float = 1.0
@@ -99,6 +101,15 @@ struct PlayerScreen: View {
     /// Woher die Marke kommt. Eine erwischte Marke wartet auf den mittleren
     /// Knopf; eine ertippte springt von selbst, sobald das Tippen ruht.
     @State private var markeVomWisch = false
+    /// Dieser Wisch hat die Steuerung geholt — und tut sonst nichts.
+    ///
+    /// **Der Wisch, der das Menü öffnet, spult nicht mit.** Vorher tat er
+    /// beides: `wischBeginn` blendet die Steuerung ein, damit ist
+    /// `steuerungDa` im selben Zug wahr, und die Bewegung desselben Fingers
+    /// lief schon auf die Zeitleiste. Man wollte nur sehen, wo man ist, und
+    /// stand danach woanders. Paul: „der Player zum Skippen soll sich ja erst
+    /// angesprochen fühlen, wenn das Menü da ist und man dann scrollt."
+    @State private var wischNurGeoeffnet = false
     @State private var naechste: Item?
     /// Nach einem Sprung kurz nicht überschreiben, sonst zieht die Anzeige
     /// auf den alten Wert zurück, bevor VLC nachgezogen hat.
@@ -392,6 +403,7 @@ struct PlayerScreen: View {
         .task { await beobachten() }
         .task {
             naechste = await model.folgeNach(item)
+            abschnitte = await model.abschnitte(fuer: item.id)
             // Erst jetzt steht fest, ob es einen „Weiter"-Griff geben darf.
             zentraleUebernehmen()
         }
@@ -507,9 +519,15 @@ struct PlayerScreen: View {
 
                 // Erscheint erst, wenn die Folge fast durch ist — sonst steht
                 // sie zwei Stunden lang im Weg. Dieselbe Regel wie auf iOS.
-                if let folge = naechste, fastDurch {
-                    Button { wechsleZu(folge) } label: {
-                        Label("Nächste Folge", systemImage: "forward.end.fill")
+                if angebot.sichtbar {
+                    Button(action: angebotAusfuehren) {
+                        HStack(spacing: 10) {
+                            Image(systemName: angebot.zeichen)
+                            // Die Beschriftung entsteht als `String` im Paket;
+                            // `verbatim` verhindert, dass sie ein zweites Mal
+                            // nachgeschlagen wird.
+                            Text(verbatim: angebot.beschriftung)
+                        }
                     }
                     .buttonStyle(PillenStil())
                 }
@@ -530,6 +548,25 @@ struct PlayerScreen: View {
 
     private var fastDurch: Bool {
         Folgenende.knopfZeigen(position: position, dauer: dauer)
+    }
+
+    /// Welcher Knopf gerade gilt. Dieselbe Regel wie auf iOS — sie steht im
+    /// Paket, damit die vier Plattformen nicht auseinanderlaufen.
+    private var angebot: Knopfangebot {
+        Abschnittslogik.angebot(position: position, dauer: dauer,
+                                abschnitte: abschnitte,
+                                hatNaechsteFolge: naechste != nil)
+    }
+
+    private func angebotAusfuehren() {
+        switch angebot {
+        case .keiner:
+            break
+        case let .ueberspringen(nach, _):
+            sprungAusfuehren(nach)
+        case .naechsteFolge:
+            if let folge = naechste { wechsleZu(folge) }
+        }
     }
 
     // MARK: - Befehle
@@ -780,6 +817,9 @@ struct PlayerScreen: View {
     private func wischBeginn() {
         guard dauer > 0, !blattOffen, !folgenOffen else { return }
         guard fokus == .leiste || fokus == .ruhe else { return }
+        // **Vor `zeigen()` merken.** Danach ist `steuerungDa` wahr, und die
+        // Frage „war sie schon da?" nicht mehr zu beantworten.
+        wischNurGeoeffnet = !steuerungDa
         wischt = true
         zeigen()
     }
@@ -794,6 +834,9 @@ struct PlayerScreen: View {
     private func gewischt(weg: CGFloat, tempo: CGFloat) {
         guard wischt, dauer > 0 else { return }
         guard steuerungDa else { zeigen(); return }
+        // Dieser Finger hat die Steuerung geholt. Er darf sie wachhalten,
+        // aber nicht spulen — dafür ist der nächste Wisch da.
+        guard !wischNurGeoeffnet else { zeigen(); return }
 
         spulAufgabe?.cancel()
         spulAufgabe = nil
@@ -812,6 +855,7 @@ struct PlayerScreen: View {
     private func wischSchluss() {
         wischt = false
         wischEnde = Date()
+        wischNurGeoeffnet = false
     }
 
     /// Der mittlere Knopf.
@@ -950,6 +994,9 @@ struct PlayerScreen: View {
             await model.reportStart(item: folge, plan: neuerPlan, seconds: 0)
 
             naechste = await model.folgeNach(folge)
+            // **Die neue Folge hat eigene Abschnitte.** Ohne das truege sie
+            // die des Vorgaengers, und der Knopf erschiene an dessen Stellen.
+            abschnitte = await model.abschnitte(fuer: folge.id)
             zentraleUebernehmen()
             wechselt = false
             // Nach dem Wechsel steht der Fokus sonst im Nichts: die Folgen-
