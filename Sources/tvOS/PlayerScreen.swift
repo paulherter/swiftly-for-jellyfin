@@ -714,7 +714,7 @@ struct PlayerScreen: View {
             springenAuf: { ziel in
                 flaeche?.seek(toSeconds: ziel)
                 position = ziel
-                sprungBis = Date().addingTimeInterval(1.2)
+                sprungBis = Date().addingTimeInterval(Zeitannahme.sprungriegel)
             },
             vor:         { springen(Double(model.vorSekunden)) },
             zurueck:     { springen(-Double(model.zurueckSekunden)) },
@@ -907,13 +907,13 @@ struct PlayerScreen: View {
                     try? await Task.sleep(for: .milliseconds(120))
                 }
                 guard !Task.isCancelled else { return }
-                sprungBis = Date().addingTimeInterval(1.2)
+                sprungBis = Date().addingTimeInterval(Zeitannahme.sprungriegel)
                 flaeche.seek(toSeconds: ziel)
             }
             return
         }
 
-        sprungBis = Date().addingTimeInterval(1.2)
+        sprungBis = Date().addingTimeInterval(Zeitannahme.sprungriegel)
         flaeche.seek(toSeconds: ziel)
     }
 
@@ -993,7 +993,7 @@ struct PlayerScreen: View {
         case .zurueck:    springen(-Double(model.zurueckSekunden))
         case let .springenAuf(sekunden):
             position = sekunden
-            sprungBis = Date().addingTimeInterval(1.2)
+            sprungBis = Date().addingTimeInterval(Zeitannahme.sprungriegel)
             flaeche.seek(toSeconds: sekunden)
             zeigen()
         case .naechste:
@@ -1045,7 +1045,7 @@ struct PlayerScreen: View {
             // laenger, faellt der Riegel zu frueh und die Anzeige springt auf
             // die alte Stelle zurueck. Beides hat Paul gesehen. Gemessen wird
             // jetzt, ob VLC dort ist, wo wir hinwollten.
-            if sprungBis != nil, abs(flaeche.positionSeconds - position) < 2 {
+            if sprungBis != nil, abs(flaeche.positionSeconds - position) < Zeitannahme.sprungAngekommen {
                 sprungBis = nil
             }
 
