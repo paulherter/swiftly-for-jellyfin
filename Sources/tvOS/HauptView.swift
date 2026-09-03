@@ -138,11 +138,17 @@ struct HauptView: View {
             // Menue fiel durch, was tvOS als Ausstieg las. Er verschwand also
             // beim ersten Druck, und keine Reparatur im Player konnte je
             // greifen, weil keine von ihnen zum Zuge kam.
+            // **Auch beim Auswahlblatt sperren, nicht nur beim Player.**
+            //
+            // Sonst bleibt alles dahinter fokussierbar: Paul kam mit dem Ring
+            // nach oben und unten an die Reiter und Kacheln hinter dem Blatt.
+            // Sichtbar verdeckt heisst auf dem Fernseher nicht unerreichbar —
+            // der Fokusmotor sucht geometrisch und kennt keine Ebenen.
             rahmen
-                .disabled(abspielen != nil)
+                .disabled(abspielen != nil || auswahlOffen)
 
             if auswahlOffen {
-                Uebernahmeauswahl(sitzungen: uebernahme.angebote,
+                TVUebernahmeauswahl(sitzungen: uebernahme.angebote,
                                   waehlen: { hierWeiterschauen($0) },
                                   abbrechen: { auswahlOffen = false })
                     .transition(.opacity)
