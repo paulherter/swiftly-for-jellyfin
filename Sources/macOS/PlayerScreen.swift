@@ -203,6 +203,15 @@ struct PlayerScreen: View {
         .onAppear { steuerungZeigen() }
         .onAppear {
             zentraleUebernehmen()
+            // **Auch die Fernsteuerung, nicht nur der Sperrbildschirm.**
+            //
+            // Beide bekommen dieselben Griffe, sie kommen nur aus
+            // verschiedenen Richtungen: die Zentrale von den Medientasten
+            // dieses Rechners, `fernbefehl` über Jellyfins Socket von einem
+            // anderen Gerät. Auf dem Mac fehlte die zweite Hälfte ganz —
+            // Paul: „wenn ich dort abspiele, wird nicht erkannt, dass ich
+            // dort abspiele, und man kann von außen nicht pausieren."
+            model.fernbefehl = ausfuehren
             halter.setzePlayer(true)
         }
         .onChange(of: stand.laeuft) { _, neu in
@@ -216,6 +225,7 @@ struct PlayerScreen: View {
             schlafAufgabe?.cancel()
             halter.aufraeumen()
             zentrale.abgeben()
+            model.fernbefehl = nil
             // Der Zeiger gehört zurück, sobald der Player weg ist.
             NSCursor.unhide()
         }
@@ -462,6 +472,29 @@ struct PlayerScreen: View {
             guard sprungTakt == takt else { return }
             withAnimation(.easeInOut(duration: 0.15)) { sprungAnzeige = nil }
         }
+    }
+
+    /// Was ein anderes Gerät hier auslöst.
+    ///
+    /// Dieselben Griffe wie in ``zentraleUebernehmen``, nur über Jellyfins
+    /// Socket statt über die Medientasten. `.stopp` schließt den Player —
+    /// darauf verlässt sich das Übernehmen: drüben zu, hier weiter.
+    private func ausfuehren(_ befehl: Fernbefehl) {
+        switch befehl {
+        case .pause:     flaeche?.pause()
+        case .weiter:    flaeche?.resume()
+        case .umschalten: umschalten()
+        case .stopp:     beenden()
+        case let .springenAuf(sekunden):
+            flaeche?.seek(toSeconds: sekunden)
+            sprungBis = Date().addingTimeInterval(2)
+        case .vor:       springe(Double(model.vorSekunden))
+        case .zurueck:   springe(-Double(model.zurueckSekunden))
+        case .naechste:
+            if let folge = naechsteFolge { zurNaechstenFolge(folge) }
+        case .vorige:    break
+        }
+        steuerungZeigen()
     }
 
     private func beenden() {
