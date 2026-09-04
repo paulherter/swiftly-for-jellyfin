@@ -156,7 +156,7 @@ extension App {
         let kiste = gehalten(seite)
         Task.detached { [self] in
             let voll = try? await client.item(id: item.id)
-            aufHauptfaden {
+            nachDemSchub {
                 defer { losgelassen(kiste) }
                 // Nur nachtragen, wenn diese Seite noch die oberste ist.
                 guard let voll,
@@ -276,12 +276,12 @@ extension App {
             if let klein,
                let daten = await Bildlager.shared.laden(klein, schluessel: klein.absoluteString),
                let ton = Bildfarbe.ton(aus: daten) {
-                aufHauptfaden { Tonblatt.setzen(ton) }
+                nachDemSchub { Tonblatt.setzen(ton) }
             }
             guard let daten = await Bildlager.shared.laden(gross,
                                                            schluessel: gross.absoluteString)
             else { return }
-            aufHauptfaden { kulisse.setzen(daten) }
+            nachDemSchub { kulisse.setzen(daten) }
         }
     }
 
@@ -390,7 +390,7 @@ extension App {
                 guard let ziel else { return nil }
                 return try? await client.playbackPlan(for: ziel.id)
             }()
-            aufHauptfaden {
+            nachDemSchub {
                 defer { losgelassen(kiste) }
                 guard let plan else { return }
                 let ziel = kiste.widget
@@ -458,7 +458,7 @@ extension App {
             let vornKiste = gehalten(vorn)
             Task.detached {
                 let folge = try? await client.naechsteFolgeDerSerie(seriesID: titel.id)
-                aufHauptfaden {
+                nachDemSchub {
                     defer { losgelassen(knopfKiste); losgelassen(vornKiste) }
                     guard let folge else { return }
                     ziel.titel = folge
