@@ -1,33 +1,39 @@
 #!/bin/bash
-# Startet die App auf Pauls laufender Wayland-Sitzung. Ueber SSH erbt man die
-# Sitzung nicht — Anzeige und Laufzeitverzeichnis muessen ausdruecklich gesetzt
-# werden, sonst findet GTK keinen Bildschirm.
+# Startet die App auf Pauls laufender Wayland-Sitzung.
 #
-# **Vollstaendig abnabeln, nicht nur in den Hintergrund schicken.** Ein
-# gestarteter Prozess erbt die offenen Leitungen des Hooks; solange auch nur
-# eine davon offen bleibt, wartet `git push` auf der anderen Seite weiter,
-# obwohl die App laengst laeuft. Paul musste deshalb jeden Durchgang von Hand
-# abbrechen. Deswegen: Eingabe von /dev/null, Ausgabe ins Protokoll, und
-# `disown`, damit die Shell den Prozess auch nicht mehr beobachtet.
+# **Über systemd, nicht über `&`.** Ein Prozess, der aus einem git-Hook heraus
+# gestartet wird, erbt dessen offene Leitungen — und solange auch nur eine
+# davon offen bleibt, wartet `git push` auf der anderen Seite weiter, obwohl
+# die App längst läuft. `setsid` mit Umleitungen reichte nicht; Paul musste
+# jeden Durchgang von Hand abbrechen.
+#
+# `systemd-run --user` übergibt den Start an den Dienstverwalter. Der neue
+# Prozess hängt an gar nichts mehr, was mit dieser SSH-Verbindung zu tun hat,
+# und `--collect` räumt die Einheit auf, wenn sie endet.
 set -uo pipefail
 BAUM="$(cd "$(dirname "$0")/.." && pwd)"
 BIN="$BAUM/Linux/.build/debug/SwiftlyLinux"
 LOG="$HOME/swiftly-linux.log"
 [ -x "$BIN" ] || { echo "  kein Programm unter $BIN"; exit 1; }
 
-pkill -f "$BIN" 2>/dev/null && echo "  alte Instanz beendet"
+systemctl --user stop swiftly.service 2>/dev/null
+pkill -f "$BIN" 2>/dev/null
 sleep 0.3
 
-source "$HOME/.swift-env.sh"
-export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-export WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-wayland-0}"
-export GDK_BACKEND=wayland
-setsid "$BIN" </dev/null >"$LOG" 2>&1 &
-disown 2>/dev/null || true
+systemd-run --user --collect --unit=swiftly \
+  --setenv=XDG_RUNTIME_DIR="/run/user/$(id -u)" \
+  --setenv=WAYLAND_DISPLAY=wayland-0 \
+  --setenv=GDK_BACKEND=wayland \
+  --setenv=LD_LIBRARY_PATH="$HOME/.swift-compat" \
+  --property=StandardOutput=append:"$LOG" \
+  --property=StandardError=append:"$LOG" \
+  "$BIN" >/dev/null 2>&1
+
 sleep 1
-if pgrep -f "$BIN" >/dev/null; then
-  echo "  läuft (PID $(pgrep -f "$BIN" | head -1))"
+if systemctl --user is-active --quiet swiftly.service; then
+  echo "  läuft"
 else
-  echo "  !! sofort beendet. Letzte Zeilen:"; tail -5 "$LOG"
+  echo "  !! nicht gestartet. Letzte Zeilen:"
+  tail -6 "$LOG" 2>/dev/null | sed 's/^/     /'
 fi
 exit 0
