@@ -1112,7 +1112,9 @@ final class App: @unchecked Sendable {
             // Drei Kacheln je Griff — `schrittweite` auf dem Mac.
             let weite = Double(stueck) * 3
             let ziel = max(0, min(ganz - seite, wert + richtung * weite))
-            sanft(von: wert, nach: ziel) { gtk_adjustment_set_value(anpassung, $0) }
+            sanft(auf: scroller, von: wert, nach: ziel) {
+                gtk_adjustment_set_value(anpassung, $0)
+            }
         }
 
         beiSignal(links, "clicked") { blaettern(-1) }
