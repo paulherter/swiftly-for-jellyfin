@@ -32,10 +32,21 @@ extension JellyfinClient {
         let sauber = code.trimmingCharacters(in: .whitespacesAndNewlines)
         guard sauber.count >= 4 else { throw JellyfinError.transport("Der Code ist zu kurz.") }
 
+        // **Kein `userId`.** Der Parameter ist wahlfrei, und wer ihn setzt,
+        // verlangt vom Server Zugriff auf *diesen* Benutzer — die Spec von
+        // 10.11.11 sagt zum 403 wörtlich „Unknown user id". Genau das kam bei
+        // Paul auf dem Mac zurück, und unsere Meldung machte daraus
+        // „Dein Konto darf Quick Connect nicht freigeben": ein Rechteproblem,
+        // das es nie gab.
+        //
+        // Ohne den Parameter gilt der angemeldete Benutzer, und der ist immer
+        // der richtige — freigeben kann ohnehin nur, wer hier angemeldet ist.
+        // Die Sitzung wird trotzdem verlangt: ohne Merkmal hat der Aufruf
+        // keinen Absender.
+        _ = sitzung
         let req = try rohAnfrage(
             "QuickConnect/Authorize", method: "POST",
-            query: [URLQueryItem(name: "code", value: sauber),
-                    URLQueryItem(name: "userId", value: sitzung.userID)])
+            query: [URLQueryItem(name: "code", value: sauber)])
 
         let (daten, antwort) = try await rohSitzung.data(for: req)
         guard let http = antwort as? HTTPURLResponse else {
@@ -49,7 +60,7 @@ extension JellyfinClient {
                 throw JellyfinError.transport("Der Code ist abgelaufen oder falsch.")
             }
         case 403:
-            throw JellyfinError.transport("Dein Konto darf Quick Connect nicht freigeben.")
+            throw JellyfinError.transport("Der Server hat die Freigabe abgelehnt.")
         case 503:
             throw JellyfinError.transport("Der Server hat Quick Connect abgeschaltet.")
         default:
